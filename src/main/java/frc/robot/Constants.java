@@ -63,7 +63,7 @@ public final class Constants {
             new Translation2d(-wheelBase / 2, -trackWidth / 2)  // Rear Right
         );
 
-    public static final double maxSpeedMetersPerSecond = 100; // Yaklaşık 14-15 ft/s
+    public static final double maxSpeedMetersPerSecond = 10; // Yaklaşık 14-15 ft/s
     public static final double maxAngularSpeed = (10 * Math.PI);  // Saniyede 1 tam tur (radyan)
 
         // --- Gyro Ayarı ---
