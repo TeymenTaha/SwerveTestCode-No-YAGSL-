@@ -48,10 +48,10 @@ public final class Constants {
     public static final int brAngleCanID = 8;
 
 
-    public static final double flChassisAngularOffset = 0;
-    public static final double frChassisAngularOffset = 0;
-    public static final double blChassisAngularOffset = 0;
-    public static final double brChassisAngularOffset = 0;
+    public static final double flChassisAngularOffset = Math.toRadians(274);
+    public static final double frChassisAngularOffset = Math.toRadians(250);
+    public static final double blChassisAngularOffset = Math.toRadians(65);
+    public static final double brChassisAngularOffset = Math.toRadians(72);
 
     public static final double trackWidth = Units.inchesToMeters(18.5); // Sağ-sol tekerlek arası
     public static final double wheelBase = Units.inchesToMeters(18.5);  // Ön-arka tekerlek arası
@@ -63,8 +63,8 @@ public final class Constants {
             new Translation2d(-wheelBase / 2, -trackWidth / 2)  // Rear Right
         );
 
-    public static final double maxSpeedMetersPerSecond = 4.5; // Yaklaşık 14-15 ft/s
-    public static final double maxAngularSpeed = 2 * Math.PI;  // Saniyede 1 tam tur (radyan)
+    public static final double maxSpeedMetersPerSecond = 10; // Yaklaşık 14-15 ft/s
+    public static final double maxAngularSpeed = (6 * Math.PI);  // Saniyede 1 tam tur (radyan)
 
         // --- Gyro Ayarı ---
         // NavX montaj yönüne göre gerekirse true yapın

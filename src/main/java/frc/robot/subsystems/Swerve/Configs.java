@@ -32,22 +32,22 @@ public class Configs {
                     .outputRange(-1, 1);
 
 
-            double angleFactor = 2 * Math.PI;
+            double angleFactor = (2 * Math.PI)/3.3;
 
             angleConfig
                     .idleMode(IdleMode.kBrake)
                     .smartCurrentLimit(ModuleConstants.turningMotorCurrentLimit);
 
-            angleConfig.encoder
+            angleConfig.analogSensor
                     .positionConversionFactor(angleFactor)
-                    .velocityConversionFactor(angleFactor / 60.0);
+                    .velocityConversionFactor((angleFactor) / 60.0);
 
             angleConfig.closedLoop
                     .feedbackSensor(FeedbackSensor.kAnalogSensor)
-                    .pid(1.0, 0, 0)
+                    .pid(0.6, 0, 0)
                     .outputRange(-1, 1)
                     .positionWrappingEnabled(true)
-                    .positionWrappingInputRange(0, angleFactor);
+                    .positionWrappingInputRange(0, (angleFactor+0.5));
         }
     }
 }

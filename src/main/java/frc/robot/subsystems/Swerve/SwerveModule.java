@@ -64,6 +64,8 @@ public class SwerveModule extends SubsystemBase{
     // Thrifty encoder'dan gelen radyan değerine göre optimizasyon
     correctedDesiredState.optimize(Rotation2d.fromRadians(angleEncoder.getPosition()));
 
+    
+
     drivePID.setReference(correctedDesiredState.speedMetersPerSecond, ControlType.kVelocity);
     
     // Turning için SparkMax PID'si analog sensörü feedback olarak kullanır
@@ -77,4 +79,6 @@ public class SwerveModule extends SubsystemBase{
   public double getAngle() {
     return angleEncoder.getPosition();
   }
+
+  
 }

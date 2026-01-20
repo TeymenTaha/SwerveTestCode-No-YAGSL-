@@ -17,7 +17,7 @@ public class RobotContainer {
     // Sürücü kumandası (Xbox)
     public static final CommandXboxController primary = new CommandXboxController(OIConstants.primaryPort);
 
-    private static final double slowFactor = 0.5;
+    private static final double slowFactor = 1;
 
   public RobotContainer() {
     configureBindings();
