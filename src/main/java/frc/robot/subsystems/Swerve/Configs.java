@@ -32,7 +32,7 @@ public class Configs {
                     .outputRange(-1, 1);
 
 
-            double angleFactor = (2 * Math.PI)/3.3;
+            double angleFactor = (2 * Math.PI)/3.4;
 
             angleConfig
                     .idleMode(IdleMode.kBrake)
@@ -46,7 +46,7 @@ public class Configs {
                     .feedbackSensor(FeedbackSensor.kAnalogSensor)
                     .pid(0.6, 0, 0)
                     .outputRange(-1, 1)
-                    .positionWrappingEnabled(true)
+                    .positionWrappingEnabled(false)
                     .positionWrappingInputRange(0, (angleFactor+0.5));
         }
     }
