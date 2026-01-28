@@ -4,12 +4,9 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
-import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
-import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkAnalogSensor;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.config.ClosedLoopConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 
@@ -121,7 +118,7 @@ public class SwerveModule extends SubsystemBase{
         SmartDashboard.putNumber(moduleID + "_AdjustedAngleDeg", Math.toDegrees(getPerfectAngleRadians()));
     }
 
-    public void setDesiredState(SwerveModuleState desiredState, double DriveFeedforwardVolts) {
+    public void setDesiredState(SwerveModuleState desiredState) {
       SwerveModuleState correctedDesiredState = new SwerveModuleState();
       correctedDesiredState.speedMetersPerSecond = desiredState.speedMetersPerSecond;
       correctedDesiredState.angle = desiredState.angle.plus(Rotation2d.fromRadians(CAO));
@@ -131,7 +128,7 @@ public class SwerveModule extends SubsystemBase{
 
       
 
-      drivePID.setReference(correctedDesiredState.speedMetersPerSecond, ControlType.kVelocity, ClosedLoopSlot.kSlot0, DriveFeedforwardVolts, ArbFFUnits.kVoltage);
+      drivePID.setReference(correctedDesiredState.speedMetersPerSecond, ControlType.kVelocity);
       
       // Turning için SparkMax PID'si analog sensörü feedback olarak kullanır
       anglePID.setReference(correctedDesiredState.angle.getRadians(), ControlType.kPosition);

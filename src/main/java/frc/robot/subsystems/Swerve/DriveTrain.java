@@ -192,7 +192,7 @@ public class DriveTrain extends SubsystemBase{
         SmartDashboard.putNumberArray("SwerveStates", swerveStates);
     }
 
-  public void setModuleStates(SwerveModuleState[] desiredStates, DriveFeedforwards feedforwards) {
+  public void setModuleStates(SwerveModuleState[] desiredStates) {
     // Tekerlek hızlarını maksimum hıza oranla (Desaturate)
     SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, DriveContants.maxSpeedMetersPerSecond);
     
