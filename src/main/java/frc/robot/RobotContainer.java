@@ -5,9 +5,18 @@
 package frc.robot;
 import frc.robot.Constants.OIConstants;
 import frc.robot.subsystems.Swerve.DriveTrain;
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.path.PathPlannerPath;
+
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 public class RobotContainer {
@@ -52,5 +61,25 @@ public class RobotContainer {
     // X butonuna basılı tutarken tekerlekleri X şeklinde kilitle (Defans modu)
     primary.x().whileTrue(new RunCommand(() -> drivetrain.setX(), drivetrain));
 
+    primary.rightTrigger().whileTrue(new RunCommand(() -> drivetrain.driveAtTarget(-MathUtil.applyDeadband(primary.getLeftY(),0.1), -MathUtil.applyDeadband(primary.getLeftX(), 0.1)), drivetrain));
+    primary.rightBumper().whileTrue(new RunCommand(() -> drivetrain.lockFront(-MathUtil.applyDeadband(primary.getLeftY(),0.1), -MathUtil.applyDeadband(primary.getLeftX(), 0.1)), drivetrain));
+    primary.leftBumper().whileTrue(new RunCommand(() -> drivetrain.lockBack(-MathUtil.applyDeadband(primary.getLeftY(),0.1), -MathUtil.applyDeadband(primary.getLeftX(), 0.1)), drivetrain));
   }
+
+  public Command getAutonomousCommand(){
+    try {
+      PathPlannerPath path = PathPlannerPath.fromPathFile("testPath");
+
+      return new SequentialCommandGroup(new InstantCommand(() -> {
+              drivetrain.zeroHeading();
+              drivetrain.autoResetOdometry(path.getStartingHolonomicPose().orElseThrow());
+      }), AutoBuilder.followPath(path));
+      
+    } catch (Exception e) {
+        DriverStation.reportError("otonom patladı la", true);
+        return Commands.none();
+    }
+  }
+
 }
+  

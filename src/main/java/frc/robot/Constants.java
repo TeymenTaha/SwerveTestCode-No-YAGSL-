@@ -3,6 +3,8 @@
 // the WPILib BSD license file in the root directory of this project.
 
 package frc.robot;
+import java.util.List;
+
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
@@ -21,6 +23,7 @@ public final class Constants {
 
   public static class ModuleConstants {
     public static final double wheelDiameterMeters = Units.inchesToMeters(3.0);
+    public static final double wheelRadius = Units.inchesToMeters(wheelDiameterMeters);
 
     public static final double drivingMotorReduction = 5.14; 
         
@@ -47,14 +50,30 @@ public final class Constants {
     public static final int brDriveCanID = 7;
     public static final int brAngleCanID = 8;
 
+    public static final double mass = 13.0;
+    public static final double MOI = 5.0;
 
+    public static final double moduleOffsetMeters = Units.inchesToMeters(26.06) / 2.0;
+
+// PathPlanner'ın beklediği liste (Sıralama: FL, FR, BL, BR)
+    public static final List<Translation2d> moduleOffsets = List.of(
+        new Translation2d(moduleOffsetMeters, moduleOffsetMeters),   // Front Left (+X, +Y)
+        new Translation2d(moduleOffsetMeters, -moduleOffsetMeters),  // Front Right (+X, -Y)
+        new Translation2d(-moduleOffsetMeters, moduleOffsetMeters),  // Back Left (-X, +Y)
+        new Translation2d(-moduleOffsetMeters, -moduleOffsetMeters)  // Back Right (-X, -Y)
+    );
+
+
+
+
+    
     public static final double flChassisAngularOffset = Math.toRadians(274);
     public static final double frChassisAngularOffset = Math.toRadians(250);
     public static final double blChassisAngularOffset = Math.toRadians(65);
     public static final double brChassisAngularOffset = Math.toRadians(72);
 
-    public static final double trackWidth = Units.inchesToMeters(18.5); // Sağ-sol tekerlek arası
-    public static final double wheelBase = Units.inchesToMeters(18.5);  // Ön-arka tekerlek arası
+    public static final double trackWidth = Units.inchesToMeters(26.06); // Sağ-sol tekerlek arası
+    public static final double wheelBase = Units.inchesToMeters(26.06);  // Ön-arka tekerlek arası
 
     public static final SwerveDriveKinematics kDriveKinematics = new SwerveDriveKinematics(
             new Translation2d(wheelBase / 2, trackWidth / 2),   // Front Left
@@ -65,6 +84,7 @@ public final class Constants {
 
     public static final double maxSpeedMetersPerSecond = 10; // Yaklaşık 14-15 ft/s
     public static final double maxAngularSpeed = (10 * Math.PI);  // Saniyede 1 tam tur (radyan)
+
 
         // --- Gyro Ayarı ---
         // NavX montaj yönüne göre gerekirse true yapın
@@ -80,7 +100,5 @@ public final class Constants {
     // Joystick eski ve gevşekse bu değeri biraz daha artırabilirsin.
     public static final double driveDeadband = 0.1;
 
-    // İsteğe bağlı: İkinci bir kumanda kullanacaksanız
-    public static final int secondaryPort = 1;
-}
+  }
 }

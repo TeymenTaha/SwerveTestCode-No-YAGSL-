@@ -19,7 +19,9 @@ public class Configs {
 
             driveConfig
                     .idleMode(IdleMode.kBrake)
-                    .smartCurrentLimit(ModuleConstants.drivingMotorCurrentLimit);
+                    .smartCurrentLimit(ModuleConstants.drivingMotorCurrentLimit)
+                    .openLoopRampRate(0.25)   // Joystick ile sürerken ivmelenme
+                    .closedLoopRampRate(0.35);
 
             driveConfig.encoder
                     .positionConversionFactor(driveFactor) // metre
@@ -36,7 +38,8 @@ public class Configs {
 
             angleConfig
                     .idleMode(IdleMode.kBrake)
-                    .smartCurrentLimit(ModuleConstants.turningMotorCurrentLimit);
+                    .smartCurrentLimit(ModuleConstants.turningMotorCurrentLimit)   // Joystick ile sürerken ivmelenme
+                    .closedLoopRampRate(0.1);
 
             angleConfig.analogSensor
                     .positionConversionFactor(angleFactor)
@@ -46,7 +49,7 @@ public class Configs {
                     .feedbackSensor(FeedbackSensor.kAnalogSensor)
                     .pid(0.6, 0, 0)
                     .outputRange(-1, 1)
-                    .positionWrappingEnabled(false)
+                    .positionWrappingEnabled(true)
                     .positionWrappingInputRange(0, (angleFactor+0.5));
         }
     }

@@ -2,9 +2,17 @@
 package frc.robot.subsystems.Swerve;
 
 
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.util.DriveFeedforwards;
 import com.studica.frc.AHRS;
 import com.studica.frc.AHRS.NavXComType;
 
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -12,23 +20,43 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructArrayPublisher;
+import edu.wpi.first.networktables.StructPublisher;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveContants;
 
 public class DriveTrain extends SubsystemBase{
+
+    private final Field2d m_field = new Field2d();
     
-    private final SwerveModule frontLeft = new SwerveModule(DriveContants.flDriveCanID, DriveContants.flAngleCanID, DriveContants.flChassisAngularOffset);
-    private final SwerveModule frontRight = new SwerveModule(DriveContants.frDriveCanID, DriveContants.frAngleCanID, DriveContants.frChassisAngularOffset);
-    private final SwerveModule backLeft = new SwerveModule(DriveContants.blDriveCanID, DriveContants.blAngleCanID, DriveContants.blChassisAngularOffset);
-    private final SwerveModule backRight = new SwerveModule(DriveContants.brDriveCanID, DriveContants.brAngleCanID, DriveContants.brChassisAngularOffset);
+    private final SwerveModule frontLeft = new SwerveModule(DriveContants.flDriveCanID, DriveContants.flAngleCanID, DriveContants.flChassisAngularOffset, "fl",0.01958944275, 3.3008210659);
+    private final SwerveModule frontRight = new SwerveModule(DriveContants.frDriveCanID, DriveContants.frAngleCanID, DriveContants.frChassisAngularOffset, "fr", 0.01469208206,3.29592370986);
+    private final SwerveModule backLeft = new SwerveModule(DriveContants.blDriveCanID, DriveContants.blAngleCanID, DriveContants.blChassisAngularOffset, "bl", 0.01958944275,3.3008210659);
+    private final SwerveModule backRight = new SwerveModule(DriveContants.brDriveCanID, DriveContants.brAngleCanID, DriveContants.brChassisAngularOffset, "br",0.01469208206,3.29102635383);
 
     private final AHRS navx = new AHRS(NavXComType.kMXP_SPI);
 
+    private final PIDController turnPID= new PIDController(0.008,0,0);
+
     private final SwerveDriveOdometry odometry;
+
+    private final StructPublisher<Pose2d> posePublisher = NetworkTableInstance.getDefault()
+        .getStructTopic("RobotPoseStruct", Pose2d.struct)
+        .publish();
+
+    private final StructArrayPublisher<SwerveModuleState> m_publisher = 
+        NetworkTableInstance.getDefault()
+            .getStructArrayTopic("SwerveStates", SwerveModuleState.struct)
+            .publish();
 
     public DriveTrain(){
         zeroHeading();
+
+        turnPID.enableContinuousInput(-180, 180);
 
         odometry = new SwerveDriveOdometry(
         DriveContants.kDriveKinematics,
@@ -39,6 +67,56 @@ public class DriveTrain extends SubsystemBase{
             backLeft.getPosition(),
             backRight.getPosition()
         });
+
+        SmartDashboard.putData("Field", m_field);
+
+
+        // 1. Değişkeni tanımla
+        RobotConfig config;
+
+        try {
+            // 2. GUI ayarlarını yüklemeyi dene
+            config = RobotConfig.fromGUISettings();
+
+            // 3. EĞER ayarlar başarıyla yüklendiyse AutoBuilder'ı yapılandır
+            AutoBuilder.configure(
+                this::getPose,
+                this::resetOdometry,
+                this::getRobotRelativeSpeeds,
+                (speeds, feedforwards) -> driveRobotRelative(speeds),
+                new PPHolonomicDriveController(
+                    new PIDConstants(0.6, 0.0, 0.0), // Translation
+                    new PIDConstants(0.6, 0.0, 0.0)  // Rotation
+                ),
+                config,
+                () -> {
+                    var alliance = DriverStation.getAlliance();
+                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
+                },
+                this
+            );
+        } catch (Exception e) {
+            // Ayarlar yüklenemezse buraya düşer, hata basar ama robot çökmez
+            DriverStation.reportError("PathPlanner config yüklenemedi usta!: " + e.getMessage(), true);
+        }
+        
+        
+    }
+
+    public void driveRobotRelative(ChassisSpeeds speeds) {
+        // Şasi hızlarını modül durumlarına çeviriyoruz
+        var states = DriveContants.kDriveKinematics.toSwerveModuleStates(speeds);
+        setModuleStates(states);
+    }
+    
+    // Mevcut hızı ChassisSpeeds olarak döndüren metod (PathPlanner geri bildirim için kullanır)
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+        return DriveContants.kDriveKinematics.toChassisSpeeds(
+            new SwerveModuleState[] {
+                frontLeft.getState(), frontRight.getState(),
+                backLeft.getState(), backRight.getState()
+            }
+        );
     }
 
     @Override
@@ -52,7 +130,35 @@ public class DriveTrain extends SubsystemBase{
                 backLeft.getPosition(),
                 backRight.getPosition()
             });
+        
+        posePublisher.set(odometry.getPoseMeters());
 
+        frontLeft.logCalibrationData();
+        frontLeft.updateCalibration();
+
+        frontRight.logCalibrationData();    
+        frontRight.updateCalibration();
+
+        backLeft.logCalibrationData();
+        backLeft.updateCalibration();
+
+        backRight.logCalibrationData();
+        backRight.updateCalibration();
+
+        m_publisher.set(new SwerveModuleState[] {
+            frontLeft.getState(),
+            frontRight.getState(),
+            backLeft.getState(),
+            backRight.getState()
+        });
+    
+        
+        SmartDashboard.putNumber("fl velocity", frontLeft.getVelocity());
+        SmartDashboard.putNumber("fr velocity", frontRight.getVelocity());
+        SmartDashboard.putNumber("bl velocity", backLeft.getVelocity());
+        SmartDashboard.putNumber("br velocity", backRight.getVelocity());
+
+        
         // SmartDashboard üzerinden tekerlek açılarını ve gyro bilgisini takip et
         SmartDashboard.putNumber("FL Angle Deg", Math.toDegrees(frontLeft.getAngle()));
         SmartDashboard.putNumber("FR Angle Deg", Math.toDegrees(frontRight.getAngle()));
@@ -74,7 +180,19 @@ public class DriveTrain extends SubsystemBase{
         setModuleStates(swerveModuleStates);
     }
 
-  public void setModuleStates(SwerveModuleState[] desiredStates) {
+    public void updateTelemetry() {
+        double[] swerveStates = new double[] {
+            frontLeft.getAngle(),  frontLeft.getVelocity(),
+            frontRight.getAngle(), frontRight.getVelocity(),
+            backLeft.getAngle(),   backLeft.getVelocity(),
+            backRight.getAngle(),  backRight.getVelocity()
+        };
+    
+        // Bu isimle (SwerveStates) gönderiyoruz
+        SmartDashboard.putNumberArray("SwerveStates", swerveStates);
+    }
+
+  public void setModuleStates(SwerveModuleState[] desiredStates, DriveFeedforwards feedforwards) {
     // Tekerlek hızlarını maksimum hıza oranla (Desaturate)
     SwerveDriveKinematics.desaturateWheelSpeeds(desiredStates, DriveContants.maxSpeedMetersPerSecond);
     
@@ -85,8 +203,9 @@ public class DriveTrain extends SubsystemBase{
   }
 
     public Rotation2d getRotation2d() {
-        // NavX açısını WPILib standartlarına (Saat yönü tersi pozitif) çeviriyoruz
-        return Rotation2d.fromDegrees(DriveContants.gyroReversed ? navx.getAngle() : -navx.getAngle());
+        //return Rotation2d.fromDegrees(DriveContants.gyroReversed ? navx.getAngle() : -navx.getAngle());
+
+        return navx.getRotation2d();
     }
 
     public Pose2d getPose() {
@@ -101,11 +220,21 @@ public class DriveTrain extends SubsystemBase{
             }, pose);
     }
 
+
+    public void autoResetOdometry(Pose2d pose) {
+        odometry.resetPosition(pose.getRotation(), 
+            new SwerveModulePosition[] {
+                frontLeft.getPosition(), frontRight.getPosition(),
+                backLeft.getPosition(), backRight.getPosition()
+            }, pose);
+    }
+
     public void zeroHeading() {
         navx.reset();
     }
 
     public double getHeading() {
+        //return Math.IEEEremainder(getRotation2d().getDegrees(), 360);
         return getRotation2d().getDegrees();
     }
 
@@ -123,5 +252,112 @@ public class DriveTrain extends SubsystemBase{
         backLeft.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(-45)));
         backRight.setDesiredState(new SwerveModuleState(0, Rotation2d.fromDegrees(45)));
       }
+
+
+      public void driveAtTarget(double xSpeed, double ySpeed) {
+        // 1. Hedef Koordinatlar
+        double targetX = 4.625594;
+        double targetY = 4.034536;
+    
+        Pose2d currentPose = getPose();
+        
+        // 2. Hedef Açıyı Hesapla
+        double angleToTarget = Math.toDegrees(Math.atan2(
+            targetY - currentPose.getY(), 
+            targetX - currentPose.getX()
+        ));
+    
+        // 3. PID ile Dönüş Hızı (Rotation)
+        // getHeading() 700 olsa da IEEEremainder onu hedefe göre normalize eder
+        double angleError = Math.IEEEremainder(getHeading() - angleToTarget, 360);
+        double rotationOutput = turnPID.calculate(angleError, 0);
+        rotationOutput = MathUtil.clamp(rotationOutput, -0.5, 0.5); // Gücü yarıya indirdik
+    
+        // 4. Ölü Bölge (Titreşim Engelleme)
+        if (Math.abs(angleError) < 1.5) rotationOutput = 0;
+    
+        // 5. Girişleri Ölçeklendir (Maksimum hızlarla çarp)
+        double xVel = xSpeed * DriveContants.maxSpeedMetersPerSecond;
+        double yVel = ySpeed * DriveContants.maxSpeedMetersPerSecond;
+        double rVel = rotationOutput * DriveContants.maxAngularSpeed;
+    
+        // 6. BURASI KRİTİK: Field-Relative Dönüşümü
+        // Eğer sağa-sola gitmiyorsa, xVel ve yVel değerlerinin doğru iletildiğinden emin olmalıyız.
+        ChassisSpeeds chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            xVel, 
+            yVel, 
+            rVel, 
+            getRotation2d()
+        );
+    
+        // 7. Modüllere Gönder
+        var states = DriveContants.kDriveKinematics.toSwerveModuleStates(chassisSpeeds);
+        
+        // Hızları sınırla (Tekerlekler patinaj çekmesin)
+        SwerveDriveKinematics.desaturateWheelSpeeds(states, DriveContants.maxSpeedMetersPerSecond);
+    
+        setModuleStates(states);
+    }
+
+    public void lockFront(double xSpeed, double ySpeed) {
+        double error = Math.IEEEremainder(getHeading(), 360);
+        double rotationOutput = turnPID.calculate(error, 0);
+    
+        // 1. SARSINTI ENGELLEYİCİ: 
+        // Eğer robot hareket halindeyse (joystick basılıysa), dönüş gücünü kısıtla.
+        // Bu sayede "ileri fırlama" hissi azalır.
+        double moveThreshold = 0.1;
+        if (Math.abs(xSpeed) > moveThreshold || Math.abs(ySpeed) > moveThreshold) {
+            rotationOutput = MathUtil.clamp(rotationOutput, -0.25, 0.25); // Daha nazik dönüş
+        }
+    
+        if (Math.abs(error) < 2.0) rotationOutput = 0;
+    
+        double xVel = xSpeed * DriveContants.maxSpeedMetersPerSecond;
+        double yVel = ySpeed * DriveContants.maxSpeedMetersPerSecond;
+        double rVel = rotationOutput * DriveContants.maxAngularSpeed;
+    
+        ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            xVel, yVel, rVel, getRotation2d()
+        );
+    
+        var states = DriveContants.kDriveKinematics.toSwerveModuleStates(speeds);
+    
+        // 2. HIZLARI DENGELE (Sarsıntıyı bitiren asıl satır)
+        SwerveDriveKinematics.desaturateWheelSpeeds(states, DriveContants.maxSpeedMetersPerSecond);
+    
+        setModuleStates(states);
+    }
+    
+    // Kilitleyeceğimiz açıyı set etmek için yardımcı bir fonksiyon
+    public void lockBack(double xSpeed, double ySpeed) {
+        double error = Math.IEEEremainder(getHeading(), 360);
+        double rotationOutput = turnPID.calculate(error, 180);
+    
+        // 1. SARSINTI ENGELLEYİCİ: 
+        // Eğer robot hareket halindeyse (joystick basılıysa), dönüş gücünü kısıtla.
+        // Bu sayede "ileri fırlama" hissi azalır.
+        double moveThreshold = 0.1;
+        if (Math.abs(xSpeed) > moveThreshold || Math.abs(ySpeed) > moveThreshold) {
+            rotationOutput = MathUtil.clamp(rotationOutput, -0.25, 0.25); // Daha nazik dönüş
+        }
+    
+        if (Math.abs(error) < 2.0) rotationOutput = 0;
+    
+        double xVel = xSpeed * DriveContants.maxSpeedMetersPerSecond;
+        double yVel = ySpeed * DriveContants.maxSpeedMetersPerSecond;
+        double rVel = rotationOutput * DriveContants.maxAngularSpeed;
+    
+        ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+            xVel, yVel, rVel, getRotation2d()
+        );
+    
+        var states = DriveContants.kDriveKinematics.toSwerveModuleStates(speeds);
+    
+        // 2. HIZLARI DENGELE (Sarsıntıyı bitiren asıl satır)
+        SwerveDriveKinematics.desaturateWheelSpeeds(states, DriveContants.maxSpeedMetersPerSecond);
+    
+        setModuleStates(states);
+    }
 }
 
